@@ -25,14 +25,17 @@ const installPlugin = async (pluginKey) => {
 	plugin.version = plugin.version.replace(/{{certbot-version}}/g, CERTBOT_VERSION_REPLACEMENT);
 	plugin.dependencies = plugin.dependencies.replace(/{{certbot-version}}/g, CERTBOT_VERSION_REPLACEMENT);
 
-	// SETUPTOOLS_USE_DISTUTILS is required for certbot plugins to install correctly
-	// in new versions of Python
-	let env = Object.assign({}, process.env, { SETUPTOOLS_USE_DISTUTILS: "stdlib" });
+	// SETUPTOOLS_USE_DISTUTILS=local uses setuptools' own bundled distutils.
+	// "stdlib" breaks Python 3.13+ where distutils was removed from the standard library.
+	let env = Object.assign({}, process.env, { SETUPTOOLS_USE_DISTUTILS: "local" });
 	if (typeof plugin.env === "object") {
 		env = Object.assign(env, plugin.env);
 	}
 
-	const cmd = `. /opt/certbot/bin/activate && pip install --no-cache-dir ${plugin.dependencies} ${plugin.package_name}${plugin.version}  && deactivate`;
+	const quotedDeps = plugin.dependencies.trim()
+		? plugin.dependencies.trim().split(/\s+/).filter(Boolean).map((d) => `'${d}'`).join(' ')
+		: '';
+	const cmd = `. /opt/certbot/bin/activate && pip install --no-cache-dir ${quotedDeps} '${plugin.package_name}${plugin.version}'  && deactivate`;
 	return utils
 		.exec(cmd, { env })
 		.then((result) => {
