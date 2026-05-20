@@ -174,10 +174,10 @@ Cypress.Commands.add('createCustomCerts', ({domain, certFile, keyFile}) => {
 				cy.log(`mkcert install output:\n${JSON.stringify(result2)}`);
 				expect(result2.exitCode).to.eq(0);
 			}).then(() => {
-				return {
+				return cy.wrap({
 					certFile: fullCertFile,
 					keyFile: fullKeyFile,
-				};
+				});
 			});
 		});
 	});
