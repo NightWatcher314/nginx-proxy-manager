@@ -55,6 +55,7 @@ function ProxyHostAgentSection({ target, search }: SectionProps) {
 			error={query.error}
 			shownCount={filtered.length}
 			totalCount={data.length}
+			storageKey={`proxy-hosts:${target.id}`}
 			onRetry={() => query.refetch()}
 			actions={
 				<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>

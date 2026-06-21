@@ -98,6 +98,7 @@ function CertificateAgentSection({ target, search }: { target: AgentTarget; sear
 			error={query.error}
 			shownCount={filtered.length}
 			totalCount={data.length}
+			storageKey={`certificates:${target.id}`}
 			onRetry={() => query.refetch()}
 			actions={
 				<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>

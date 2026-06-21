@@ -66,6 +66,7 @@ function UserAgentSection({ target, search }: { target: AgentTarget; search: str
 			error={query.error}
 			shownCount={filtered.length}
 			totalCount={data.length}
+			storageKey={`users:${target.id}`}
 			onRetry={() => query.refetch()}
 			actions={
 				<Button size="sm" className="btn-orange" onClick={() => showUserModal("new", target.id, target.name)}>

@@ -1,5 +1,6 @@
 import type React from "react";
-import { IconRefresh } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { IconChevronDown, IconChevronRight, IconRefresh } from "@tabler/icons-react";
 import Alert from "react-bootstrap/Alert";
 import { Button, Loading } from "src/components";
 import type { AgentTarget } from "src/hooks";
@@ -15,6 +16,8 @@ interface Props {
 	totalCount?: number;
 	onRetry?: () => void;
 	actions?: React.ReactNode;
+	storageKey?: string;
+	defaultCollapsed?: boolean;
 	children: React.ReactNode;
 }
 
@@ -29,8 +32,29 @@ function AgentSection({
 	totalCount,
 	onRetry,
 	actions,
+	storageKey,
+	defaultCollapsed = false,
 	children,
 }: Props) {
+	const resolvedStorageKey = useMemo(
+		() => storageKey || `npm-agent-section:${target.id}`,
+		[storageKey, target.id],
+	);
+	const [isCollapsed, setIsCollapsed] = useState(() => {
+		if (typeof window === "undefined") {
+			return defaultCollapsed;
+		}
+		return window.localStorage.getItem(resolvedStorageKey) === "collapsed" || defaultCollapsed;
+	});
+
+	useEffect(() => {
+		setIsCollapsed(window.localStorage.getItem(resolvedStorageKey) === "collapsed" || defaultCollapsed);
+	}, [defaultCollapsed, resolvedStorageKey]);
+
+	useEffect(() => {
+		window.localStorage.setItem(resolvedStorageKey, isCollapsed ? "collapsed" : "expanded");
+	}, [isCollapsed, resolvedStorageKey]);
+
 	return (
 		<div className="card my-3 border">
 			<div className={`card-status-start bg-${color}`} />
@@ -38,6 +62,15 @@ function AgentSection({
 				<div className="row w-full align-items-center g-2">
 					<div className="col">
 						<div className="d-flex align-items-center gap-2 flex-wrap">
+							<button
+								type="button"
+								className="btn btn-icon btn-sm btn-ghost-secondary"
+								aria-expanded={!isCollapsed}
+								aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${target.name}`}
+								onClick={() => setIsCollapsed((current) => !current)}
+							>
+								{isCollapsed ? <IconChevronRight size={18} /> : <IconChevronDown size={18} />}
+							</button>
 							<h3 className="card-title mb-0">{target.name}</h3>
 							<span className="badge bg-green-lt">{target.isLocal ? "local" : "agent"}</span>
 							{typeof shownCount === "number" && typeof totalCount === "number" ? (
@@ -52,7 +85,7 @@ function AgentSection({
 					{actions ? <div className="col-auto d-flex gap-2">{actions}</div> : null}
 				</div>
 			</div>
-			{isLoading ? (
+			{isCollapsed ? null : isLoading ? (
 				<div className="card-body py-4">
 					<Loading noLogo />
 				</div>
