@@ -13,6 +13,9 @@ import error from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
+import deadHostModel from "../models/dead_host.js";
+import proxyHostModel from "../models/proxy_host.js";
+import redirectionHostModel from "../models/redirection_host.js";
 import tokenModel from "../models/token.js";
 import userModel from "../models/user.js";
 import internalAuditLog from "./audit-log.js";
@@ -23,6 +26,43 @@ const letsencryptConfig = "/etc/letsencrypt.ini";
 const certbotCommand = "certbot";
 const certbotLogsDir = "/data/logs";
 const certbotWorkDir = "/tmp/letsencrypt-lib";
+
+
+const normalizeDomainNames = (domainNames = []) => {
+	return [...new Set(domainNames.map((name) => String(name || "").trim().toLowerCase()).filter(Boolean))].sort();
+};
+
+const domainMatches = (pattern, domain) => {
+	const certName = String(pattern || "").toLowerCase();
+	const hostName = String(domain || "").toLowerCase();
+	if (!certName || !hostName) {
+		return false;
+	}
+	if (certName === hostName) {
+		return true;
+	}
+	if (certName.startsWith("*.")) {
+		const suffix = certName.slice(1);
+		if (!hostName.endsWith(suffix)) {
+			return false;
+		}
+		const prefix = hostName.slice(0, -suffix.length);
+		return prefix.length > 0 && !prefix.includes(".");
+	}
+	return false;
+};
+
+const domainsCoveredBy = (domainNames, certificateDomainNames) => {
+	return domainNames.filter((domain) => !certificateDomainNames.some((certDomain) => domainMatches(certDomain, domain)));
+};
+
+const hostSummary = (type, host, uncoveredDomains = []) => ({
+	type,
+	id: host.id,
+	domain_names: host.domain_names || [],
+	uncovered_domain_names: uncoveredDomains,
+	will_detach: false,
+});
 
 const omissions = () => {
 	return ["is_deleted", "owner.is_deleted", "meta.dns_provider_credentials"];
@@ -330,6 +370,174 @@ const internalCertificate = {
 			row.streams = utils.omitRows(["is_deleted"])(row.streams);
 		}
 		return row;
+	},
+
+
+	buildReissueAnalysis: async (access, data) => {
+		await access.can("certificates:update", data);
+		const certificate = await internalCertificate.get(access, {
+			id: data.id,
+			expand: ["proxy_hosts", "redirection_hosts", "dead_hosts", "streams"],
+		});
+		if (certificate.provider !== "letsencrypt") {
+			throw new error.ValidationError("Only Let'sEncrypt certificates can be reissued");
+		}
+
+		const oldDomainNames = normalizeDomainNames(certificate.domain_names);
+		const newDomainNames = normalizeDomainNames(data.domain_names);
+		if (!newDomainNames.length) {
+			throw new error.ValidationError("At least one domain name is required");
+		}
+
+		const addedDomainNames = newDomainNames.filter((domain) => !oldDomainNames.includes(domain));
+		const removedDomainNames = oldDomainNames.filter((domain) => !newDomainNames.includes(domain));
+		const stillCovered = [];
+		const uncovered = [];
+
+		const collectHosts = (type, hosts = []) => {
+			hosts.map((host) => {
+				const uncoveredDomains = domainsCoveredBy(host.domain_names || [], newDomainNames);
+				if (uncoveredDomains.length) {
+					uncovered.push(hostSummary(type, host, uncoveredDomains));
+				} else {
+					stillCovered.push(hostSummary(type, host));
+				}
+				return true;
+			});
+		};
+
+		collectHosts("proxy_host", certificate.proxy_hosts);
+		collectHosts("redirection_host", certificate.redirection_hosts);
+		collectHosts("dead_host", certificate.dead_hosts);
+
+		const blockedStreams = removedDomainNames.length
+			? (certificate.streams || []).map((stream) => ({
+					type: "stream",
+					id: stream.id,
+					incoming_port: stream.incoming_port,
+					will_detach: false,
+				}))
+			: [];
+
+		const detachUncoveredHosts = !!data.detach_uncovered_hosts;
+		uncovered.map((host) => {
+			host.will_detach = detachUncoveredHosts && host.type !== "stream";
+			return true;
+		});
+
+		return {
+			certificate_id: certificate.id,
+			old_domain_names: oldDomainNames,
+			new_domain_names: newDomainNames,
+			added_domain_names: addedDomainNames,
+			removed_domain_names: removedDomainNames,
+			still_covered: stillCovered,
+			uncovered_hosts: uncovered,
+			blocked_streams: blockedStreams,
+			can_reissue: blockedStreams.length === 0 && (uncovered.length === 0 || detachUncoveredHosts),
+			requires_detach_confirmation: uncovered.length > 0,
+			challenge_type: certificate.meta?.dns_challenge ? "dns" : "http",
+		};
+	},
+
+	detachReissueHost: async (host) => {
+		const patch = {
+			certificate_id: 0,
+			ssl_forced: false,
+			hsts_enabled: false,
+			hsts_subdomains: false,
+			http2_support: false,
+		};
+		const modelMap = {
+			proxy_host: { model: proxyHostModel, nginxType: "proxy_host" },
+			redirection_host: { model: redirectionHostModel, nginxType: "redirection_host" },
+			dead_host: { model: deadHostModel, nginxType: "dead_host" },
+		};
+		const target = modelMap[host.type];
+		if (!target) {
+			throw new error.ValidationError(`Unsupported host type for certificate detach: ${host.type}`);
+		}
+		const row = await target.model.query().patchAndFetchById(host.id, patch).then(utils.omitRow(["is_deleted"]));
+		if (row.enabled) {
+			await internalNginx.configure(target.model, target.nginxType, row);
+		}
+		return host;
+	},
+
+	reissue: async (access, data) => {
+		const analysis = await internalCertificate.buildReissueAnalysis(access, data);
+		if (!analysis.can_reissue) {
+			throw new error.ValidationError("Certificate reissue is blocked by hosts or streams that would no longer be covered");
+		}
+
+		const certificate = await certificateModel.query().where("is_deleted", 0).andWhere("id", data.id).first();
+		if (!certificate?.id) {
+			throw new error.ItemNotFoundError(data.id);
+		}
+		const nextCertificate = _.assign({}, certificate, {
+			domain_names: analysis.new_domain_names,
+			nice_name: analysis.new_domain_names.join(", "),
+		});
+		const user = await userModel.query().where("is_deleted", 0).andWhere("id", certificate.owner_user_id).first();
+		if (!user?.email) {
+			throw new error.ValidationError("A valid email address must be set on your user account to use Let's Encrypt");
+		}
+
+		const inUseResult = await internalHost.getHostsWithDomains(analysis.new_domain_names);
+		await internalCertificate.disableInUseHosts(inUseResult);
+		try {
+			if (nextCertificate.meta?.dns_challenge) {
+				await internalNginx.reload();
+				await internalCertificate.reissueLetsEncryptSslWithDnsChallenge(nextCertificate, user.email);
+			} else {
+				await internalNginx.generateLetsEncryptRequestConfig(nextCertificate);
+				await internalNginx.reload();
+				setTimeout(() => {}, 5000);
+				await internalCertificate.reissueLetsEncryptSsl(nextCertificate, user.email);
+				await internalNginx.deleteLetsEncryptRequestConfig(nextCertificate);
+			}
+		} catch (err) {
+			await internalNginx.deleteLetsEncryptRequestConfig(nextCertificate);
+			await internalCertificate.enableInUseHosts(inUseResult);
+			await internalNginx.reload();
+			throw err;
+		}
+
+		const certInfo = await internalCertificate.getCertificateInfoFromFile(
+			`${internalCertificate.getLiveCertPath(certificate.id)}/fullchain.pem`,
+		);
+		const updatedCertificate = await certificateModel.query().patchAndFetchById(certificate.id, {
+			domain_names: analysis.new_domain_names,
+			nice_name: analysis.new_domain_names.join(", "),
+			expires_on: moment(certInfo.dates.to, "X").format("YYYY-MM-DD HH:mm:ss"),
+		});
+
+		const detachedHosts = [];
+		for (const host of analysis.uncovered_hosts) {
+			if (host.will_detach) {
+				await internalCertificate.detachReissueHost(host);
+				detachedHosts.push(host);
+			}
+		}
+
+		await internalCertificate.enableInUseHosts(inUseResult);
+		await internalNginx.reload();
+
+		await internalAuditLog.add(access, {
+			action: "reissued",
+			object_type: "certificate",
+			object_id: updatedCertificate.id,
+			meta: {
+				old_domain_names: analysis.old_domain_names,
+				new_domain_names: analysis.new_domain_names,
+				added_domain_names: analysis.added_domain_names,
+				removed_domain_names: analysis.removed_domain_names,
+				detached_hosts: detachedHosts,
+				challenge_type: analysis.challenge_type,
+			},
+		});
+
+		return utils.omitRow(omissions())(updatedCertificate);
 	},
 
 	/**
@@ -883,6 +1091,114 @@ const internalCertificate = {
 			return result;
 		} catch (err) {
 			// Don't fail if file does not exist, so no need for action in the callback
+			fs.unlink(credentialsLocation, () => {});
+			throw err;
+		}
+	},
+
+
+	reissueLetsEncryptSsl: async (certificate, email) => {
+		logger.info(
+			`Reissuing LetsEncrypt certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
+		);
+
+		const args = [
+			"certonly",
+			"-n",
+			"--force-renewal",
+			"--config",
+			letsencryptConfig,
+			"--work-dir",
+			certbotWorkDir,
+			"--logs-dir",
+			certbotLogsDir,
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--agree-tos",
+			"--authenticator",
+			"webroot",
+			"-m",
+			email,
+			"--preferred-challenges",
+			"http",
+			"--domains",
+			certificate.domain_names.join(","),
+		];
+
+		if (certificate.meta?.key_type) {
+			args.push("--key-type", certificate.meta.key_type);
+		}
+
+		const adds = internalCertificate.getAdditionalCertbotArgs(certificate.id);
+		args.push(...adds.args);
+
+		logger.info(`Command: ${certbotCommand} ${args ? args.join(" ") : ""}`);
+		const result = await utils.execFile(certbotCommand, args, adds.opts);
+		logger.success(result);
+		return result;
+	},
+
+	reissueLetsEncryptSslWithDnsChallenge: async (certificate, email) => {
+		await installPlugin(certificate.meta.dns_provider);
+		const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
+		if (!dnsPlugin) {
+			throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
+		}
+
+		logger.info(
+			`Reissuing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
+		);
+
+		const credentialsLocation = `/etc/letsencrypt/credentials/credentials-${certificate.id}`;
+		fs.mkdirSync("/etc/letsencrypt/credentials", { recursive: true });
+		fs.writeFileSync(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
+		const hasConfigArg = certificate.meta.dns_provider !== "route53";
+
+		const args = [
+			"certonly",
+			"-n",
+			"--force-renewal",
+			"--config",
+			letsencryptConfig,
+			"--work-dir",
+			certbotWorkDir,
+			"--logs-dir",
+			certbotLogsDir,
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--agree-tos",
+			"-m",
+			email,
+			"--preferred-challenges",
+			"dns",
+			"--domains",
+			certificate.domain_names.join(","),
+			"--authenticator",
+			dnsPlugin.full_plugin_name,
+		];
+
+		if (hasConfigArg) {
+			args.push(`--${dnsPlugin.full_plugin_name}-credentials`, credentialsLocation);
+		}
+		if (certificate.meta.propagation_seconds !== undefined) {
+			args.push(
+				`--${dnsPlugin.full_plugin_name}-propagation-seconds`,
+				certificate.meta.propagation_seconds.toString(),
+			);
+		}
+		if (certificate.meta?.key_type) {
+			args.push("--key-type", certificate.meta.key_type);
+		}
+
+		const adds = internalCertificate.getAdditionalCertbotArgs(certificate.id, certificate.meta.dns_provider);
+		args.push(...adds.args);
+
+		logger.info(`Command: ${certbotCommand} ${args ? args.join(" ") : ""}`);
+		try {
+			const result = await utils.execFile(certbotCommand, args, adds.opts);
+			logger.info(result);
+			return result;
+		} catch (err) {
 			fs.unlink(credentialsLocation, () => {});
 			throw err;
 		}

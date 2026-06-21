@@ -264,6 +264,78 @@ router
 		}
 	});
 
+
+/**
+ * Analyze LE cert reissue impact
+ *
+ * /api/nginx/certificates/123/reissue/analyze
+ */
+router
+	.route("/:certificate_id/reissue/analyze")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+	.all(agentForward())
+
+	/**
+	 * POST /api/nginx/certificates/123/reissue/analyze
+	 *
+	 * Analyze certificate reissue
+	 */
+	.post(async (req, res, next) => {
+		try {
+			const payload = await apiValidator(
+				getValidationSchema("/nginx/certificates/{certID}/reissue/analyze", "post"),
+				req.body,
+			);
+			const result = await internalCertificate.buildReissueAnalysis(res.locals.access, {
+				id: Number.parseInt(req.params.certificate_id, 10),
+				...payload,
+			});
+			res.status(200).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	});
+
+/**
+ * Reissue LE Certs with a new domain set
+ *
+ * /api/nginx/certificates/123/reissue
+ */
+router
+	.route("/:certificate_id/reissue")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+	.all(agentForward())
+
+	/**
+	 * POST /api/nginx/certificates/123/reissue
+	 *
+	 * Reissue certificate
+	 */
+	.post(async (req, res, next) => {
+		req.setTimeout(900000); // 15 minutes timeout
+		try {
+			const payload = await apiValidator(
+				getValidationSchema("/nginx/certificates/{certID}/reissue", "post"),
+				req.body,
+			);
+			const result = await internalCertificate.reissue(res.locals.access, {
+				id: Number.parseInt(req.params.certificate_id, 10),
+				...payload,
+			});
+			res.status(200).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	});
+
 /**
  * Upload Certs
  *

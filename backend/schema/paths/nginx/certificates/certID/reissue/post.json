@@ -1,0 +1,61 @@
+{
+	"operationId": "reissueCertificate",
+	"summary": "Reissue a Certificate",
+	"tags": ["certificates"],
+	"security": [
+		{
+			"bearerAuth": ["certificates.manage"]
+		}
+	],
+	"parameters": [
+		{
+			"in": "path",
+			"name": "certID",
+			"description": "Certificate ID",
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			},
+			"required": true,
+			"example": 1
+		}
+	],
+	"requestBody": {
+		"description": "Certificate Reissue Payload",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["domain_names"],
+					"properties": {
+						"domain_names": {
+							"$ref": "../../../../../components/certificate-object.json#/properties/domain_names"
+						},
+						"detach_uncovered_hosts": {
+							"type": "boolean",
+							"default": false
+						}
+					}
+				},
+				"example": {
+					"domain_names": ["example.com", "www.example.com"],
+					"detach_uncovered_hosts": false
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "200 response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/certificate-object.json"
+					}
+				}
+			}
+		}
+	}
+}

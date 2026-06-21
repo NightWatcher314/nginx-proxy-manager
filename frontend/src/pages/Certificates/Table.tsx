@@ -1,4 +1,4 @@
-import { IconDotsVertical, IconDownload, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconDotsVertical, IconDownload, IconRefresh, IconRepeat, IconTrash } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo, type ReactNode } from "react";
 import type { Certificate } from "src/api/backend";
@@ -20,10 +20,11 @@ interface Props {
 	isFetching?: boolean;
 	onDelete?: (id: number) => void;
 	onRenew?: (id: number) => void;
+	onReissue?: (id: number) => void;
 	onDownload?: (id: number) => void;
 	customAddBtn?: ReactNode;
 }
-export default function Table({ data, isFetching, onDelete, onRenew, onDownload, isFiltered, customAddBtn }: Props) {
+export default function Table({ data, isFetching, onDelete, onRenew, onReissue, onDownload, isFiltered, customAddBtn }: Props) {
 	const columnHelper = createColumnHelper<Certificate>();
 	const columns = useMemo(
 		() => [
@@ -127,6 +128,19 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 									<IconRefresh size={16} />
 									<T id="action.renew" />
 								</a>
+								{info.row.original.provider === "letsencrypt" ? (
+									<a
+										className="dropdown-item"
+										href="#"
+										onClick={(e) => {
+											e.preventDefault();
+											onReissue?.(info.row.original.id);
+										}}
+									>
+										<IconRepeat size={16} />
+										Reissue
+									</a>
+								) : null}
 								<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
 									<a
 										className="dropdown-item"
@@ -161,7 +175,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 				},
 			}),
 		],
-		[columnHelper, onDelete, onRenew, onDownload],
+		[columnHelper, onDelete, onRenew, onReissue, onDownload],
 	);
 
 	const tableInstance = useReactTable<Certificate>({

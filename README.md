@@ -36,6 +36,8 @@ so that the barrier to entry here is low.
 - Access Lists and basic HTTP Authentication for your hosts
 - Advanced Nginx configuration available for super users
 - User management, permissions, and audit log
+- Fork-only certificate reissue workflow for changing Let's Encrypt domain sets with impact analysis
+- Domain chips can be entered with Enter, Space, or pasted whitespace/comma-separated lists
 
 ::: warning
 `armv7` is no longer supported in version 2.14+. This is due to Nodejs dropping support for armhf. Please

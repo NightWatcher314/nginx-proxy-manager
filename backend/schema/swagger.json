@@ -141,6 +141,16 @@
 				"$ref": "./paths/nginx/certificates/certID/renew/post.json"
 			}
 		},
+		"/nginx/certificates/{certID}/reissue/analyze": {
+			"post": {
+				"$ref": "./paths/nginx/certificates/certID/reissue/analyze/post.json"
+			}
+		},
+		"/nginx/certificates/{certID}/reissue": {
+			"post": {
+				"$ref": "./paths/nginx/certificates/certID/reissue/post.json"
+			}
+		},
 		"/nginx/certificates/{certID}/upload": {
 			"post": {
 				"$ref": "./paths/nginx/certificates/certID/upload/post.json"

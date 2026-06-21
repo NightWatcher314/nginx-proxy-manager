@@ -42,6 +42,7 @@ export * from "./loginAsUser";
 export * from "./models";
 export * from "./refreshToken";
 export * from "./renewCertificate";
+export * from "./reissueCertificate";
 export * from "./responseTypes";
 export * from "./setPermissions";
 export * from "./testHttpCertificate";

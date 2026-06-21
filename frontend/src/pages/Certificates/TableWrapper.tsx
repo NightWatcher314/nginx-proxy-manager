@@ -12,6 +12,7 @@ import {
 	showHelpModal,
 	showHTTPCertificateModal,
 	showRenewCertificateModal,
+	showReissueCertificateModal,
 } from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import { showError, showObjectSuccess } from "src/notifications";
@@ -109,6 +110,7 @@ function CertificateAgentSection({ target, search }: { target: AgentTarget; sear
 				isFiltered={!!search}
 				isFetching={query.isFetching}
 				onRenew={(id: number) => showRenewCertificateModal(id, target.id, target.name)}
+					onReissue={(id: number) => showReissueCertificateModal(id, target.id, target.name)}
 				onDownload={handleDownload}
 				customAddBtn={<AddCertificateDropdown target={target} size={undefined} />}
 				onDelete={(id: number) =>

@@ -11,6 +11,7 @@ export * from "./PermissionsModal";
 export * from "./ProxyHostModal";
 export * from "./RedirectionHostModal";
 export * from "./RenewCertificateModal";
+export * from "./ReissueCertificateModal";
 export * from "./SetPasswordModal";
 export * from "./StreamModal";
 export * from "./TwoFactorModal";
