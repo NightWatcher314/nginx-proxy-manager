@@ -2131,6 +2131,11 @@ property-information@^7.0.0:
   resolved "https://registry.yarnpkg.com/property-information/-/property-information-7.1.0.tgz#b622e8646e02b580205415586b40804d3e8bfd5d"
   integrity sha512-TwEZ+X+yCJmYfL7TPUOcvBZ4QfoT5YenQiJuX//0th53DE6w0xxLEtfK3iyryQFddXuvkIk51EEgrJQ0WJkOmQ==
 
+qrcode-generator@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/qrcode-generator/-/qrcode-generator-2.0.4.tgz#e8b3f30922577eba52078aa9c0d5a2a74fe1fd94"
+  integrity sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==
+
 query-string@^9.4.0:
   version "9.4.0"
   resolved "https://registry.yarnpkg.com/query-string/-/query-string-9.4.0.tgz#4f2cd518680e087dd781dd605f75dcb18c7f7a53"
@@ -2225,6 +2230,14 @@ react-markdown@^10.1.0:
     unified "^11.0.0"
     unist-util-visit "^5.0.0"
     vfile "^6.0.0"
+
+react-qr-code@^2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/react-qr-code/-/react-qr-code-2.2.0.tgz#301b5dc4d2fed503e1e313f237a7f32c1885152a"
+  integrity sha512-e5nS0UUN22K3Nf8KBRUzemfdJ6OmnN5w+kbnj1lvJaol9RyVRFeGl05bCkxSN2ZegbLxjjYjX1+mmAoX9+fAhw==
+  dependencies:
+    prop-types "^15.8.1"
+    qrcode-generator "^2.0.4"
 
 react-router-dom@^7.16.0:
   version "7.16.0"
