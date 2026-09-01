@@ -1,7 +1,7 @@
 <p align="center">
 	<img src="https://nginxproxymanager.com/github.png">
 	<br><br>
-	<img src="https://img.shields.io/badge/version-2.15.1-green.svg?style=for-the-badge">
+	<img src="https://img.shields.io/badge/version-2.15.1--nightwatcher.7-green.svg?style=for-the-badge">
 	<a href="https://github.com/NightWatcher314/nginx-proxy-manager">
 		<img src="https://img.shields.io/badge/fork-NightWatcher314-blue.svg?style=for-the-badge">
 	</a>
@@ -75,7 +75,7 @@ services:
       - ./letsencrypt:/etc/letsencrypt
 ```
 
-This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `registry.nightaye.top/nginx-proxy-manager:2.15.1-nightwatcher.1` if you do not want automatic `latest` updates.
+This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `registry.nightaye.top/nginx-proxy-manager:2.15.1-nightwatcher.7` if you do not want automatic `latest` updates.
 
 3. Bring up your stack by running
 
