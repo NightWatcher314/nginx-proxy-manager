@@ -232,7 +232,7 @@ const internalDeadHost = {
 		});
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("dead_host", row);
+		await internalNginx.deleteConfig("dead_host", row, true);
 		await internalNginx.reload();
 
 		// Add to audit log
@@ -308,7 +308,7 @@ const internalDeadHost = {
 		});
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("dead_host", row);
+		await internalNginx.deleteConfig("dead_host", row, true);
 		await internalNginx.reload();
 
 		// Add to audit log

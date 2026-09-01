@@ -289,7 +289,7 @@ const internalRedirectionHost = {
 					})
 					.then(() => {
 						// Delete Nginx Config
-						return internalNginx.deleteConfig("redirection_host", row).then(() => {
+						return internalNginx.deleteConfig("redirection_host", row, true).then(() => {
 							return internalNginx.reload();
 						});
 					})
@@ -390,7 +390,7 @@ const internalRedirectionHost = {
 					})
 					.then(() => {
 						// Delete Nginx Config
-						return internalNginx.deleteConfig("redirection_host", row).then(() => {
+						return internalNginx.deleteConfig("redirection_host", row, true).then(() => {
 							return internalNginx.reload();
 						});
 					})
