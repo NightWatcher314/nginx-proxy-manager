@@ -1,16 +1,17 @@
 <p align="center">
 	<img src="https://nginxproxymanager.com/github.png">
 	<br><br>
-	<img src="https://img.shields.io/badge/version-2.15.1-green.svg?style=for-the-badge">
-	<a href="https://hub.docker.com/repository/docker/jc21/nginx-proxy-manager">
-		<img src="https://img.shields.io/docker/stars/jc21/nginx-proxy-manager.svg?style=for-the-badge">
+	<img src="https://img.shields.io/badge/version-2.15.1--nightwatcher.7-green.svg?style=for-the-badge">
+	<a href="https://github.com/NightWatcher314/nginx-proxy-manager">
+		<img src="https://img.shields.io/badge/fork-NightWatcher314-blue.svg?style=for-the-badge">
 	</a>
-	<a href="https://hub.docker.com/repository/docker/jc21/nginx-proxy-manager">
-		<img src="https://img.shields.io/docker/pulls/jc21/nginx-proxy-manager.svg?style=for-the-badge">
+	<a href="https://registry.nightaye.top/v2/nginx-proxy-manager/tags/list">
+		<img src="https://img.shields.io/badge/image-registry.nightaye.top%2Fnginx--proxy--manager-blue.svg?style=for-the-badge">
 	</a>
 </p>
 
-This project comes as a pre-built Docker image that enables you to easily forward to your websites
+This fork is maintained for our own deployment and is published as a pre-built Docker image at
+`registry.nightaye.top/nginx-proxy-manager:latest`. It enables you to easily forward to your websites
 running at home or otherwise, including free SSL, without having to know too much about Nginx or Letsencrypt.
 
 - [Quick Setup](#quick-setup)
@@ -35,6 +36,8 @@ so that the barrier to entry here is low.
 - Access Lists and basic HTTP Authentication for your hosts
 - Advanced Nginx configuration available for super users
 - User management, permissions, and audit log
+- Fork-only certificate reissue workflow for changing Let's Encrypt domain sets with impact analysis
+- Domain chips can be entered with Enter, Space, or pasted whitespace/comma-separated lists
 
 ::: warning
 `armv7` is no longer supported in version 2.14+. This is due to Nodejs dropping support for armhf. Please
@@ -61,7 +64,7 @@ I won't go into too much detail here, but here are the basics for someone new to
 ```yml
 services:
   app:
-    image: 'docker.io/jc21/nginx-proxy-manager:latest'
+    image: 'registry.nightaye.top/nginx-proxy-manager:latest'
     restart: unless-stopped
     ports:
       - '80:80'
@@ -72,7 +75,7 @@ services:
       - ./letsencrypt:/etc/letsencrypt
 ```
 
-This is the bare minimum configuration required. See the [documentation](https://nginxproxymanager.com/setup/) for more.
+This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `registry.nightaye.top/nginx-proxy-manager:2.15.1-nightwatcher.7` if you do not want automatic `latest` updates.
 
 3. Bring up your stack by running
 
