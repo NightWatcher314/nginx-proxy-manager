@@ -50,6 +50,7 @@ done
 # directory ownership already matches PUID:PGID (chownit skips recursion then)
 if [ -f /data/keys.json ]; then
 	chown "$PUID:$PGID" /data/keys.json
+	chmod 600 /data/keys.json
 fi
 
 if [ "$(is_true "${SKIP_CERTBOT_OWNERSHIP:-}")" = '1' ]; then

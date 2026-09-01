@@ -291,7 +291,7 @@ const internalProxyHost = {
 					})
 					.then(() => {
 						// Delete Nginx Config
-						return internalNginx.deleteConfig("proxy_host", row).then(() => {
+						return internalNginx.deleteConfig("proxy_host", row, true).then(() => {
 							return internalNginx.reload();
 						});
 					})
@@ -392,7 +392,7 @@ const internalProxyHost = {
 					})
 					.then(() => {
 						// Delete Nginx Config
-						return internalNginx.deleteConfig("proxy_host", row).then(() => {
+						return internalNginx.deleteConfig("proxy_host", row, true).then(() => {
 							return internalNginx.reload();
 						});
 					})

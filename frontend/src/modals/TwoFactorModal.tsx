@@ -168,7 +168,13 @@ const TwoFactorModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						<T id="2fa.setup-instructions" />
 					</p>
 					<div className="text-center mb-3">
-						<QRCode value={setupData.otpauthUrl} size={200} className={styles.qrcode} />
+						<QRCode
+							value={setupData.otpauthUrl}
+							size={200}
+							className={styles.qrcode}
+							role="img"
+							aria-label="Two-factor authentication QR code"
+						/>
 					</div>
 					<label className="mb-3 d-block">
 						<span className="form-label small text-muted">

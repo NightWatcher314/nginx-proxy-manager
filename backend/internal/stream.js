@@ -238,7 +238,7 @@ const internalStream = {
 					})
 					.then(() => {
 						// Delete Nginx Config
-						return internalNginx.deleteConfig("stream", row).then(() => {
+						return internalNginx.deleteConfig("stream", row, true).then(() => {
 							return internalNginx.reload();
 						});
 					})
@@ -339,7 +339,7 @@ const internalStream = {
 					})
 					.then(() => {
 						// Delete Nginx Config
-						return internalNginx.deleteConfig("stream", row).then(() => {
+						return internalNginx.deleteConfig("stream", row, true).then(() => {
 							return internalNginx.reload();
 						});
 					})
