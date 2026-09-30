@@ -5,13 +5,13 @@
 	<a href="https://github.com/NightWatcher314/nginx-proxy-manager">
 		<img src="https://img.shields.io/badge/fork-NightWatcher314-blue.svg?style=for-the-badge">
 	</a>
-	<a href="https://registry.nightaye.top/v2/nginx-proxy-manager/tags/list">
-		<img src="https://img.shields.io/badge/image-registry.nightaye.top%2Fnginx--proxy--manager-blue.svg?style=for-the-badge">
+	<a href="https://harbor.iprc.top/v2/zhengzifu/nginx-proxy-manager/tags/list">
+		<img src="https://img.shields.io/badge/image-harbor.iprc.top%2Fzhengzifu%2Fnginx--proxy--manager-blue.svg?style=for-the-badge">
 	</a>
 </p>
 
 This fork is maintained for our own deployment and is published as a pre-built Docker image at
-`registry.nightaye.top/nginx-proxy-manager:latest`. It enables you to easily forward to your websites
+`harbor.iprc.top/zhengzifu/nginx-proxy-manager:latest`. It enables you to easily forward to your websites
 running at home or otherwise, including free SSL, without having to know too much about Nginx or Letsencrypt.
 
 - [Quick Setup](#quick-setup)
@@ -95,7 +95,7 @@ I won't go into too much detail here, but here are the basics for someone new to
 ```yml
 services:
   app:
-    image: 'registry.nightaye.top/nginx-proxy-manager:latest'
+    image: 'harbor.iprc.top/zhengzifu/nginx-proxy-manager:latest'
     restart: unless-stopped
     ports:
       - '80:80'
@@ -106,7 +106,7 @@ services:
       - ./letsencrypt:/etc/letsencrypt
 ```
 
-This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `registry.nightaye.top/nginx-proxy-manager:2.16.0-nightwatcher.0` if you do not want automatic `latest` updates.
+This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `harbor.iprc.top/zhengzifu/nginx-proxy-manager:2.16.0-nightwatcher.0` if you do not want automatic `latest` updates.
 
 3. Bring up your stack by running
 
