@@ -333,7 +333,7 @@ const ProxyHostModal = EasyModal.create(({ id, agentId, visible, remove }: Props
 												</div>
 											</div>
 											<div className="tab-pane" id="tab-locations" role="tabpanel">
-												<LocationsFields initialValues={data?.locations || []} />
+												<LocationsFields initialValues={data?.locations || []} agentId={agentId} />
 											</div>
 											<div className="tab-pane" id="tab-ssl" role="tabpanel">
 												<SSLCertificateField

@@ -139,12 +139,7 @@ const TwoFactorModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						)}
 					</div>
 					{!isEnabled ? (
-						<Button
-							fullWidth
-							color="azure"
-							onClick={handleStartSetup}
-							isLoading={isSubmitting}
-						>
+						<Button fullWidth color="azure" onClick={handleStartSetup} isLoading={isSubmitting}>
 							<T id="2fa.enable" />
 						</Button>
 					) : (

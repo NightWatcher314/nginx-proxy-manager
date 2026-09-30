@@ -6,7 +6,7 @@ import { deleteProxyHost, toggleProxyHost, type ProxyHost } from "src/api/backen
 import { AgentSection, Button, HasPermission, LoadingPage } from "src/components";
 import { type AgentTarget, useAgentTargets, useProxyHosts } from "src/hooks";
 import { T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "src/modals";
+import { showDeleteConfirmModal, showHelpModal, showHostLogsModal, showProxyHostModal } from "src/modals";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import Table from "./Table";
@@ -70,6 +70,7 @@ function ProxyHostAgentSection({ target, search }: SectionProps) {
 				isFiltered={!!search}
 				isFetching={query.isFetching}
 				onEdit={(id: number) => showProxyHostModal(id, target.id)}
+				onLogs={(id: number) => showHostLogsModal(id, target.id)}
 				onDelete={(id: number) => {
 					const host = data.find((h) => h.id === id);
 					showDeleteConfirmModal({

@@ -5,7 +5,7 @@ import EasyModal from "ez-modal-react";
 import { RawIntlProvider } from "react-intl";
 import { toast, ToastContainer } from "react-toastify";
 import { AuthProvider, LocaleProvider, ThemeProvider } from "src/context";
-import { intl } from "src/locale";
+import { getLocale, intl, isRTLLocale } from "src/locale";
 import Router from "src/Router.tsx";
 import { registerPwa } from "src/modules/Pwa";
 
@@ -44,7 +44,7 @@ function App() {
 								hideProgressBar={true}
 								newestOnTop={true}
 								closeOnClick={true}
-								rtl={false}
+								rtl={isRTLLocale(getLocale())}
 								closeButton={false}
 							/>
 						</AuthProvider>

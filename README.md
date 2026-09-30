@@ -1,7 +1,7 @@
 <p align="center">
 	<img src="https://nginxproxymanager.com/github.png">
 	<br><br>
-	<img src="https://img.shields.io/badge/version-2.15.1--nightwatcher.7-green.svg?style=for-the-badge">
+	<img src="https://img.shields.io/badge/version-2.16.0--nightwatcher.0-green.svg?style=for-the-badge">
 	<a href="https://github.com/NightWatcher314/nginx-proxy-manager">
 		<img src="https://img.shields.io/badge/fork-NightWatcher314-blue.svg?style=for-the-badge">
 	</a>
@@ -39,6 +39,37 @@ so that the barrier to entry here is low.
 - Fork-only certificate reissue workflow for changing Let's Encrypt domain sets with impact analysis
 - Domain chips can be entered with Enter, Space, or pasted whitespace/comma-separated lists
 
+### Fork maintenance: 2.16.0-nightwatcher.0
+
+The product branch is `feature/multi-agent-manager`; the `upstream-clean` branch
+is an experiment and does not preserve all fork features. This release merges
+upstream `v2.16.0` while retaining multi-Agent management, per-Agent sections and
+dashboard totals, certificate reissue with impact analysis, and PWA support.
+Upstream provides the JWT key protections, local 2FA QR generation and Nginx
+configuration fixes. The fork keeps its QR sizing/accessibility corrections and
+self-hosted release defaults.
+
+Per-path access lists and host logs use the selected Agent. DNS reissue follows
+upstream's credential-file lifecycle: write immediately before Certbot, remove
+after success or failure. Password changes revoke older tokens, refresh attempts
+and unfinished 2FA challenges; an Agent request may obtain a new token once
+using its configured credentials. Host log reads scan at most 5 MiB from the
+end of the file and return at most 1,000 lines.
+
+Source validation:
+
+```sh
+cd backend
+yarn lint && yarn validate-schema
+node --experimental-vm-modules --test test/fork-sync.test.js
+cd ../frontend
+yarn locale-compile && yarn lint && yarn vitest run --no-color && yarn build
+```
+
+Deployment acceptance must separately verify NAS and Aliyun image/version,
+Nginx config validity, local and remote host/ACL/log reads, certificate reissue
+analysis, and existing proxy routes. A build alone does not verify deployment.
+
 ::: warning
 `armv7` is no longer supported in version 2.14+. This is due to Nodejs dropping support for armhf. Please
 use the `2.13.7` image tag if this applies to you.
@@ -75,7 +106,7 @@ services:
       - ./letsencrypt:/etc/letsencrypt
 ```
 
-This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `registry.nightaye.top/nginx-proxy-manager:2.15.1-nightwatcher.7` if you do not want automatic `latest` updates.
+This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `registry.nightaye.top/nginx-proxy-manager:2.16.0-nightwatcher.0` if you do not want automatic `latest` updates.
 
 3. Bring up your stack by running
 

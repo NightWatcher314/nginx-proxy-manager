@@ -38,11 +38,7 @@ export default {
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 
-		const auth = await authModel
-			.query()
-			.where("user_id", "=", user.id)
-			.where("type", "=", "password")
-			.first();
+		const auth = await authModel.query().where("user_id", "=", user.id).where("type", "=", "password").first();
 
 		if (!auth) {
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
@@ -50,10 +46,7 @@ export default {
 
 		const valid = await auth.verifyPassword(data.secret);
 		if (!valid) {
-			throw new errs.AuthError(
-				ERROR_MESSAGE_INVALID_AUTH,
-				ERROR_MESSAGE_INVALID_AUTH_I18N,
-			);
+			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH, ERROR_MESSAGE_INVALID_AUTH_I18N);
 		}
 
 		if (data.scope !== "user" && _.indexOf(user.roles, data.scope) === -1) {
@@ -116,6 +109,8 @@ export default {
 		thisData.expiry = thisData.expiry || "1d";
 
 		if (access?.token.getUserId(0)) {
+			// Validate the existing session before it can mint a fresh token.
+			await access.can("users:get", access.token.getUserId(0));
 			// Create a moment of the expiry expression
 			const expiry = parseDatePeriod(thisData.expiry);
 			if (expiry === null) {
@@ -171,7 +166,7 @@ export default {
 		}
 
 		// Check scope
-		if (!tokenData.scope || tokenData.scope[0] !== "2fa-challenge") {
+		if (tokenData.scope?.[0] !== "2fa-challenge") {
 			throw new errs.AuthError("Invalid challenge token");
 		}
 
@@ -180,13 +175,18 @@ export default {
 			throw new errs.AuthError("Invalid challenge token");
 		}
 
+		// A password change also revokes unfinished logins, before a backup code
+		// can be consumed or the old challenge exchanged for a new session.
+		const auth = await authModel.query().where("user_id", "=", userId).where("type", "=", "password").first();
+		const changedAt = auth?.meta?.password_changed_at;
+		if (changedAt && (!Number.isSafeInteger(tokenData.iat) || tokenData.iat < changedAt)) {
+			throw new errs.TokenRevokedError("Token was issued before the password was changed");
+		}
+
 		// Verify 2FA code
 		const valid = await twoFactor.verifyForLogin(userId, code);
 		if (!valid) {
-			throw new errs.AuthError(
-				ERROR_MESSAGE_INVALID_2FA,
-				ERROR_MESSAGE_INVALID_2FA_I18N,
-			);
+			throw new errs.AuthError(ERROR_MESSAGE_INVALID_2FA, ERROR_MESSAGE_INVALID_2FA_I18N);
 		}
 
 		// Create full token
