@@ -1,7 +1,7 @@
 <p align="center">
 	<img src="https://nginxproxymanager.com/github.png">
 	<br><br>
-	<img src="https://img.shields.io/badge/version-2.16.0--nightwatcher.0-green.svg?style=for-the-badge">
+	<img src="https://img.shields.io/badge/version-2.16.0--nightwatcher.1-green.svg?style=for-the-badge">
 	<a href="https://github.com/NightWatcher314/nginx-proxy-manager">
 		<img src="https://img.shields.io/badge/fork-NightWatcher314-blue.svg?style=for-the-badge">
 	</a>
@@ -39,7 +39,7 @@ so that the barrier to entry here is low.
 - Fork-only certificate reissue workflow for changing Let's Encrypt domain sets with impact analysis
 - Domain chips can be entered with Enter, Space, or pasted whitespace/comma-separated lists
 
-### Fork maintenance: 2.16.0-nightwatcher.0
+### Fork maintenance: 2.16.0-nightwatcher.1
 
 The product branch is `feature/multi-agent-manager`; the `upstream-clean` branch
 is an experiment and does not preserve all fork features. This release merges
@@ -48,6 +48,11 @@ dashboard totals, certificate reissue with impact analysis, and PWA support.
 Upstream provides the JWT key protections, local 2FA QR generation and Nginx
 configuration fixes. The fork keeps its QR sizing/accessibility corrections and
 self-hosted release defaults.
+
+This release also merges upstream `develop` through `1028e139`: certificate API
+reads hide custom private keys, JWT ownership changes run only when needed,
+disabled IP range fetching no longer starts a renewal timer, dependency fixes,
+and German/Italian translations. JWT keys remain restricted to mode `0600`.
 
 Per-path access lists and host logs use the selected Agent. DNS reissue follows
 upstream's credential-file lifecycle: write immediately before Certbot, remove
@@ -65,6 +70,10 @@ node --experimental-vm-modules --test test/fork-sync.test.js
 cd ../frontend
 yarn locale-compile && yarn lint && yarn vitest run --no-color && yarn build
 ```
+
+Image builds must inject `.version` into `backend/package.json` in the build
+context for runtime health metadata, and pass `BUILD_VERSION="$(cat .version)"`
+and the source commit through `BUILD_COMMIT` as Docker build arguments.
 
 Deployment acceptance must separately verify NAS and Aliyun image/version,
 Nginx config validity, local and remote host/ACL/log reads, certificate reissue
@@ -106,7 +115,7 @@ services:
       - ./letsencrypt:/etc/letsencrypt
 ```
 
-This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `harbor.iprc.top/zhengzifu/nginx-proxy-manager:2.16.0-nightwatcher.0` if you do not want automatic `latest` updates.
+This is the bare minimum configuration required for our self-maintained image. Use a pinned tag such as `harbor.iprc.top/zhengzifu/nginx-proxy-manager:2.16.0-nightwatcher.1` if you do not want automatic `latest` updates.
 
 3. Bring up your stack by running
 

@@ -65,7 +65,7 @@ const hostSummary = (type, host, uncoveredDomains = []) => ({
 });
 
 const omissions = () => {
-	return ["is_deleted", "owner.is_deleted", "meta.dns_provider_credentials"];
+	return ["is_deleted", "owner.is_deleted", "meta.dns_provider_credentials", "meta.certificate_key"];
 };
 
 const internalCertificate = {

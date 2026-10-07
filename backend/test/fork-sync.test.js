@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import test from "node:test";
@@ -7,6 +10,7 @@ import Ajv from "ajv/dist/2020.js";
 import lodash from "lodash";
 import express from "express";
 import errs from "../lib/error.js";
+import utils from "../lib/utils.js";
 
 // Load production modules while replacing only external effects (DB, network,
 // certbot and filesystem writes). No production data or certificates are used.
@@ -234,5 +238,69 @@ test("DNS reissue removes credential file after success and failure", async () =
 		assert.deepEqual(calls.map((call) => call.action), ["write", "unlink"]);
 		assert.equal(calls[0].mode, 0o600);
 		assert.equal(calls[0].path, calls[1].path);
+	}
+});
+
+test("certificate reads hide secrets while stored custom keys remain writable", async () => {
+	const stored = {
+		id: 9,
+		provider: "other",
+		meta: { certificate: "public fixture", certificate_key: "private fixture", dns_provider_credentials: "dns fixture" },
+	};
+	const writes = [];
+	let list = false;
+	const certificateModel = { query: () => {
+		const query = Promise.resolve(list ? [structuredClone(stored)] : structuredClone(stored));
+		for (const method of ["where", "andWhere", "groupBy", "allowGraph", "orderBy", "first", "withGraphFetched"]) query[method] = () => query;
+		return query;
+	} };
+	const imports = {
+		"node:fs": { default: { existsSync: () => true, writeFile(filename, contents, callback) { writes.push({ filename, matchesStoredKey: contents === stored.meta.certificate_key }); callback(); } } },
+		"node:https": { default: {} }, path: { default: path }, archiver: { ZipArchive: class {} }, lodash: { default: lodash }, moment: { default: () => {} }, "proxy-agent": { ProxyAgent: class {} }, "temp-write": { default: {} },
+		"../certbot/dns-plugins.json": { default: {} }, "../lib/certbot.js": { installPlugin: async () => {} },
+		"../lib/config.js": { useLetsencryptServer: () => false, useLetsencryptStaging: () => false },
+		"../lib/error.js": { default: errs }, "../lib/utils.js": { default: utils }, "../logger.js": { debug() {}, ssl: logger },
+	};
+	for (const name of ["certificate", "dead_host", "proxy_host", "redirection_host", "token", "user"]) imports[`../models/${name}.js`] = { default: name === "certificate" ? certificateModel : {} };
+	for (const name of ["audit-log", "host", "nginx"]) imports[`./${name}.js`] = { default: {} };
+	const certificate = await loadModule("../internal/certificate.js", imports);
+	const access = { can: async () => ({ permission_visibility: "all" }) };
+	const single = await certificate.get(access, { id: stored.id });
+	list = true;
+	const rows = await certificate.getAll(access);
+	for (const row of [single, ...rows]) {
+		assert.equal(Object.hasOwn(row.meta, "certificate_key"), false);
+		assert.equal(Object.hasOwn(row.meta, "dns_provider_credentials"), false);
+		assert.equal(row.meta.certificate, stored.meta.certificate);
+	}
+	assert.equal(Object.hasOwn(stored.meta, "certificate_key"), true);
+	await certificate.writeCustomCert(stored);
+	assert.deepEqual(writes, [
+		{ filename: "/data/custom_ssl/npm-9/fullchain.pem", matchesStoredKey: false },
+		{ filename: "/data/custom_ssl/npm-9/privkey.pem", matchesStoredKey: true },
+	]);
+});
+
+test("JWT ownership skips matching owners and always restricts key permissions", () => {
+	const script = fs.readFileSync(new URL("../../docker/rootfs/etc/s6-overlay/s6-rc.d/prepare/30-ownership.sh", import.meta.url), "utf8");
+	const ownership = script.slice(script.indexOf("if [ -f /data/keys.json ]; then"), script.indexOf('\nif [ "$(is_true'));
+	const directory = fs.mkdtempSync(path.join(tmpdir(), "npm-ownership-"));
+	try {
+		const keyPath = path.join(directory, "keys.json");
+		const callsPath = path.join(directory, "chown.log");
+		for (const owner of ["123:456", "0:0"]) {
+			fs.writeFileSync(keyPath, "{}", { mode: 0o644 });
+			fs.chmodSync(keyPath, 0o644);
+			fs.writeFileSync(callsPath, "");
+			const result = spawnSync("bash", ["-e", "-c", `stat() { printf '%s' "$FIXTURE_OWNER"; }\nchown() { printf '%s' "$1" >> "$FIXTURE_CALLS"; }\n${ownership.replaceAll("/data/keys.json", keyPath)}`], {
+				env: { ...process.env, PUID: "123", PGID: "456", FIXTURE_OWNER: owner, FIXTURE_CALLS: callsPath },
+				encoding: "utf8",
+			});
+			assert.equal(result.status, 0, result.stderr);
+			assert.equal(fs.readFileSync(callsPath, "utf8"), owner === "123:456" ? "" : "123:456");
+			assert.equal(fs.statSync(keyPath).mode & 0o777, 0o600);
+		}
+	} finally {
+		fs.rmSync(directory, { recursive: true, force: true });
 	}
 });
